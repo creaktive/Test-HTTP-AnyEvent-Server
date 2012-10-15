@@ -1,0 +1,62 @@
+=pod
+
+=encoding utf8
+
+=head1 NAME
+
+Test::HTTP::AnyEvent::Server - the async counterpart to Test::HTTP::Server
+
+=head1 VERSION
+
+version 0.003
+
+=head1 SYNOPSIS
+
+    use Test::HTTP::AnyEvent::Server;
+
+    my $server = Test::HTTP::AnyEvent::Server->new;
+
+    AE::cv->wait;
+
+=head1 DESCRIPTION
+
+This package provides a simple B<NON>-forking HTTP server which can be used for testing HTTP clients.
+
+=head1 METHODS
+
+=head2 start_server($callback)
+
+Internal.
+
+=head2 uri()
+
+Return URI of a newly created server.
+
+=head1 FUNCTIONS
+
+=head2 _cleanup
+
+Close descriptor and shutdown connection.
+
+=head2 _reply
+
+Issue HTTP reply to HTTP request.
+
+=for Pod::Coverage BUILD
+DEMOLISH
+
+=head1 SEE ALSO
+
+L<Test::HTTP::Server>
+
+=head1 AUTHOR
+
+Stanislaw Pusep <stas@sysd.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2012 by Stanislaw Pusep.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+

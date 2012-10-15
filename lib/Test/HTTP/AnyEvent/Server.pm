@@ -78,22 +78,24 @@ sub BUILD {
                 # child
                 close $rh;
 
-                my $cv = AE::cv;
                 my $h = AnyEvent::Handle->new(
                     fh          => $wh,
                     on_error    => sub {
-                        my ($_h, $fatal, $msg) = @_;
+                        #my ($_h, $fatal, $msg) = @_;
+                        my ($_h) = @_;
                         shutdown $_h->{fh}, 2;
                         $_h->destroy;
                     },
                 );
 
-                my $server = $self->start_server(sub {
-                    my (undef, $address, $port) = @_;
-                    $h->push_write(join("\t", $address, $port));
-                });
+                $self->set_server(
+                    $self->start_server(sub {
+                        my (undef, $address, $port) = @_;
+                        $h->push_write(join("\t", $address, $port));
+                    })
+                );
 
-                $cv->wait;
+                AE::cv->wait;
                 POSIX::_exit(0);
                 exit 1;
             } default {
@@ -165,7 +167,8 @@ sub start_server {
             my ($req, $hdr);
 
             $h->push_read(regex => qr{\015?\012}x, sub {
-                my ($h, $data) = @_;
+                #my ($h, $data) = @_;
+                my (undef, $data) = @_;
                 $data =~ s/\s+$//sx;
                 $req = $data;
                 AE::log debug => "request: [$req]\n";
@@ -207,7 +210,8 @@ Close descriptor and shutdown connection.
 =cut
 
 sub _cleanup {
-    my ($h, $fatal, $msg) = @_;
+    #my ($h, $fatal, $msg) = @_;
+    my ($h) = @_;
     AE::log debug => "closing connection\n";
     eval {
         no warnings;    ## no critic
@@ -242,7 +246,7 @@ sub _reply {
 
     if ($req =~ m{^(GET|POST)\s+(.+)\s+(HTTP/1\.[01])$}ix) {
         my ($method, $uri, $protocol) = ($1, $2, $3);
-        AE::log debug => "sending response\n";
+        AE::log debug => "sending response to $method ($protocol)\n";
         for ($uri) {
             when (m{^/repeat/(\d+)/(.+)}x) {
                 $res->content($2 x $1);
