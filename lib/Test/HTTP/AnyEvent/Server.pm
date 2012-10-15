@@ -25,6 +25,119 @@ package Test::HTTP::AnyEvent::Server;
 
 This package provides a simple B<NON>-forking HTTP server which can be used for testing HTTP clients.
 
+=head1 INTERFACE
+
+Mostly borrowed from L<Test::HTTP::Server>.
+
+=head2 GET /echo/head
+
+Echoes back the issued HTTP request (except the content part):
+
+    $ curl -v http://127.0.0.1:44721/echo/head
+    * About to connect() to 127.0.0.1 port 44721 (#0)
+    *   Trying 127.0.0.1...
+    * connected
+    * Connected to 127.0.0.1 (127.0.0.1) port 44721 (#0)
+    > GET /echo/head HTTP/1.1
+    > User-Agent: curl/7.27.0
+    > Host: 127.0.0.1:44721
+    > Accept: */*
+    >
+    * HTTP 1.0, assume close after body
+    < HTTP/1.0 200 OK
+    < Connection: close
+    < Date: Mon, 15 Oct 2012 19:18:54 GMT
+    < Server: Test::HTTP::AnyEvent::Server/0.003 AnyEvent/7.02 Perl/5.016001 (linux)
+    < Content-Type: text/plain
+    <
+    GET /echo/head HTTP/1.1
+    User-Agent: curl/7.27.0
+    Host: 127.0.0.1:44721
+    Accept: */*
+
+    * Closing connection #0
+
+=head2 GET /echo/body
+
+Echoes back the content part of an issued HTTP POST request:
+
+    $ curl -v -d param1=value1 -d param2=value2 http://127.0.0.1:44721/echo/body
+    * About to connect() to 127.0.0.1 port 44721 (#0)
+    *   Trying 127.0.0.1...
+    * connected
+    * Connected to 127.0.0.1 (127.0.0.1) port 44721 (#0)
+    > POST /echo/body HTTP/1.1
+    > User-Agent: curl/7.27.0
+    > Host: 127.0.0.1:44721
+    > Accept: */*
+    > Content-Length: 27
+    > Content-Type: application/x-www-form-urlencoded
+    >
+    * upload completely sent off: 27 out of 27 bytes
+    * HTTP 1.0, assume close after body
+    < HTTP/1.0 200 OK
+    < Connection: close
+    < Date: Mon, 15 Oct 2012 19:19:50 GMT
+    < Server: Test::HTTP::AnyEvent::Server/0.003 AnyEvent/7.02 Perl/5.016001 (linux)
+    < Content-Type: text/plain
+    <
+    * Closing connection #0
+    param1=value1&param2=value2
+
+=head2 GET /repeat/5/PADDING
+
+Mindlessly repeat the specified pattern:
+
+    $ curl -v http://127.0.0.1:44721/repeat/5/PADDING
+    * About to connect() to 127.0.0.1 port 44721 (#0)
+    *   Trying 127.0.0.1...
+    * connected
+    * Connected to 127.0.0.1 (127.0.0.1) port 44721 (#0)
+    > GET /repeat/5/PADDING HTTP/1.1
+    > User-Agent: curl/7.27.0
+    > Host: 127.0.0.1:44721
+    > Accept: */*
+    >
+    * HTTP 1.0, assume close after body
+    < HTTP/1.0 200 OK
+    < Connection: close
+    < Date: Mon, 15 Oct 2012 19:21:12 GMT
+    < Server: Test::HTTP::AnyEvent::Server/0.003 AnyEvent/7.02 Perl/5.016001 (linux)
+    < Content-Type: text/plain
+    <
+    * Closing connection #0
+    PADDINGPADDINGPADDINGPADDINGPADDING
+
+=head2 GET /delay/5
+
+Holds the response for a specified number of seconds.
+Useful to test the timeout routines:
+
+    $ curl -v http://127.0.0.1:44721/delay/5 && date
+    * About to connect() to 127.0.0.1 port 44721 (#0)
+    *   Trying 127.0.0.1...
+    * connected
+    * Connected to 127.0.0.1 (127.0.0.1) port 44721 (#0)
+    > GET /delay/5 HTTP/1.1
+    > User-Agent: curl/7.27.0
+    > Host: 127.0.0.1:44721
+    > Accept: */*
+    >
+    * HTTP 1.0, assume close after body
+    < HTTP/1.0 200 OK
+    < Connection: close
+    < Date: Mon, 15 Oct 2012 19:24:05 GMT
+    < Server: Test::HTTP::AnyEvent::Server/0.003 AnyEvent/7.02 Perl/5.016001 (linux)
+    < Content-Type: text/plain
+    <
+    * Closing connection #0
+    issued Mon Oct 15 19:24:05 2012
+    Mon Oct 15 16:24:10 BRT 2012
+
+B<P.S.> - not present in L<Test::HTTP::Server>.
+
+B<P.P.S.> - setting the C<delay> value below the L</timeout> value is quite pointless.
+
 =cut
 
 use feature qw(switch);
@@ -336,7 +449,7 @@ sub _reply {
             } when (m{^/echo/body$}x) {
                 $res->content($content);
             } when (m{^/delay/(\d+)$}x) {
-                $res->content('issued ' . scalar gmtime);
+                $res->content(sprintf(qq(issued %s\n), scalar gmtime));
                 $timer{$h} = AE::timer $1, 0, sub {
                     delete $timer{$h};
                     AE::log debug => "delayed response\n";
@@ -362,9 +475,17 @@ sub _reply {
     return;
 }
 
+=head1 TODO
+
+=for :list
+* Implement C<cookie>/C<index> routes from L<Test::HTTP::Server>;
+* Implement custom routes;
+* Test edge cases for L</forked>.
+
 =head1 SEE ALSO
 
-L<Test::HTTP::Server>
+=for :list
+* L<Test::HTTP::Server>
 
 =cut
 
