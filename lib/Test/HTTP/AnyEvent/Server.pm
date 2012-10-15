@@ -140,7 +140,7 @@ B<P.P.S.> - setting the C<delay> value below the L</timeout> value is quite poin
 
 =cut
 
-use feature qw(switch);
+use feature qw(state switch);
 use strict;
 use utf8;
 use warnings qw(all);
@@ -160,7 +160,7 @@ use POSIX;
 
 # VERSION
 
-our (%pool, %timer);
+our %pool;
 
 =attr address
 
@@ -420,6 +420,7 @@ B<(internal)> Issue HTTP reply.
 
 sub _reply {
     my ($h, $req, $hdr, $content) = @_;
+    state $timer = {};
 
     my $res = HTTP::Response->new(
         200 => 'OK',
@@ -450,8 +451,8 @@ sub _reply {
                 $res->content($content);
             } when (m{^/delay/(\d+)$}x) {
                 $res->content(sprintf(qq(issued %s\n), scalar gmtime));
-                $timer{$h} = AE::timer $1, 0, sub {
-                    delete $timer{$h};
+                $timer->{$h} = AE::timer $1, 0, sub {
+                    delete $timer->{$h};
                     AE::log debug => "delayed response\n";
                     $h->push_write($res->as_string("\015\012"));
                     _cleanup($h);

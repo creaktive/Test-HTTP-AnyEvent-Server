@@ -100,7 +100,7 @@ B<(internal)> Issue HTTP reply.
 
 Mostly borrowed from L<Test::HTTP::Server>.
 
-=head2 /echo/head
+=head2 GET /echo/head
 
 Echoes back the issued HTTP request (except the content part):
 
@@ -128,7 +128,7 @@ Echoes back the issued HTTP request (except the content part):
 
     * Closing connection #0
 
-=head2 /echo/body
+=head2 GET /echo/body
 
 Echoes back the content part of an issued HTTP POST request:
 
@@ -155,7 +155,7 @@ Echoes back the content part of an issued HTTP POST request:
     * Closing connection #0
     param1=value1&param2=value2
 
-=head2 /repeat/5/PADDING
+=head2 GET /repeat/5/PADDING
 
 Mindlessly repeat the specified pattern:
 
@@ -179,7 +179,7 @@ Mindlessly repeat the specified pattern:
     * Closing connection #0
     PADDINGPADDINGPADDINGPADDINGPADDING
 
-=head2 /delay/5
+=head2 GET /delay/5
 
 Holds the response for a specified number of seconds.
 Useful to test the timeout routines:

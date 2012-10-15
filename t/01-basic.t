@@ -20,6 +20,7 @@ http_request GET => $server->uri . q(echo/head), sub {
 
     like($body, qr{^GET\s+/echo/head\s+HTTP/1\.[12]\b}isx, q(echo/head));
     ok($hdr->{q(content-type)} eq q(text/plain), q(Content-Type));
+    ok($hdr->{connection} eq q(close), q(Connection));
     like($hdr->{server}, qr{^Test::HTTP::AnyEvent::Server/}x, q(User-Agent));
 
     $cv->end;
@@ -68,4 +69,4 @@ http_request HEAD => $server->uri, sub {
 
 $cv->wait;
 
-done_testing(11);
+done_testing(12);
