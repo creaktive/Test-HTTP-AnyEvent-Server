@@ -261,7 +261,7 @@ sub _reply {
             } when (m{^/echo/body$}x) {
                 $res->content($content);
             } when (m{^/delay/(\d+)$}x) {
-                $res->content('issued ' . scalar localtime);
+                $res->content('issued ' . scalar gmtime);
                 $timer{$h} = AE::timer $1, 0, sub {
                     delete $timer{$h};
                     AE::log debug => "delayed response\n";
