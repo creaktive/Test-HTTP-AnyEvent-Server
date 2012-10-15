@@ -17,8 +17,8 @@ my $ua = HTTP::Tiny->new(
     proxy           => undef,
 );
 
-my $res = $ua->get($server->uri . q(repeat/10000/asdfgh));
+my $res = $ua->get($server->uri . q(repeat/1000/asdfgh));
 ok($res->{success}, q(success));
-like($res->{content}, qr{^(?:asdfgh){10000}$}x, q(content OK));
+like($res->{content}, qr{^(?:asdfgh){1000}$}x, q(content OK));
 
 done_testing(2);

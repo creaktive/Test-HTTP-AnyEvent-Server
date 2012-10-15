@@ -268,17 +268,16 @@ sub BUILD {
                 my $h = AnyEvent::Handle->new(
                     fh          => $wh,
                     on_error    => sub {
-                        #my ($_h, $fatal, $msg) = @_;
-                        my ($_h) = @_;
-                        shutdown $_h->{fh}, 2;
-                        $_h->destroy;
+                        AE::log fatal =>
+                            "couldn't syswrite() to pipe: $!";
                     },
                 );
 
                 $self->set_server(
                     $self->start_server(sub {
                         my (undef, $address, $port) = @_;
-                        $h->push_write(join("\t", $address, $port));
+                        # have to postpone so the address/port gets actually bound
+                        AE::postpone { $h->push_write(join("\t", $address, $port)) };
                     })
                 );
 
