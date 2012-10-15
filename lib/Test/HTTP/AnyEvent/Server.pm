@@ -3,11 +3,23 @@ package Test::HTTP::AnyEvent::Server;
 
 =head1 SYNOPSIS
 
+    #!/usr/bin/env perl
+    use common::sense;
+
+    use AnyEvent::HTTP;
     use Test::HTTP::AnyEvent::Server;
 
     my $server = Test::HTTP::AnyEvent::Server->new;
+    my $cv = AE::cv;
 
-    AE::cv->wait;
+    $cv->begin;
+    http_request GET => $server->uri . q(echo/head), sub {
+        my ($body, $hdr) = @_;
+        say $body;
+        $cv->end;
+    };
+
+    $cv->wait;
 
 =head1 DESCRIPTION
 
@@ -37,13 +49,75 @@ use POSIX;
 
 our (%pool, %timer);
 
+=attr address
+
+Address to bind the server.
+Defaults to C<127.0.0.1>.
+
+=cut
+
 has address     => (is => 'ro', isa => 'Str', default => '127.0.0.1', writer => 'set_address');
+
+=attr port
+
+Port to bind the server.
+Picks the first available by default.
+
+=cut
+
 has port        => (is => 'ro', isa => 'Int', writer => 'set_port');
+
+=attr maxconn
+
+Limit the number of accepted connections to this.
+Default: 10.
+
+=cut
+
 has maxconn     => (is => 'ro', isa => 'Int', default => 10);
-has timeout     => (is => 'ro', isa => 'Int', default => 10);
+
+=attr timeout
+
+Timeout connection after this number of seconds.
+Default: 60.
+
+=cut
+
+has timeout     => (is => 'ro', isa => 'Int', default => 60);
+
+=attr disable_proxy
+
+Reset the proxy-controlling environment variables (C<no_proxy>/C<http_proxy>/C<ftp_proxy>/C<all_proxy>).
+I guess you don't need a proxy to connect to yourself.
+Default: true.
+
+=cut
+
 has disable_proxy => (is => 'ro', isa => 'Bool', default => 1);
+
+=attr forked
+
+B<(experimental)> Sometimes, you just need to test some blocking code.
+Setting this flag to true will start L<Test::HTTP::AnyEvent::Server> in a forked process.
+
+=cut
+
 has forked      => (is => 'ro', isa => 'Bool', default => 0);
+
+=attr forked_pid
+
+B<(internal)> Holds the PID of a child process if L</forked> flag was used.
+
+=cut
+
 has forked_pid  => (is => 'ro', isa => 'Int', writer => 'set_forked_pid');
+
+=attr server
+
+B<(internal)> Holds the guard object whose lifetime it tied to the TCP server.
+
+=cut
+
 has server      => (is => 'ro', isa => 'Ref', writer => 'set_server');
 
 =for Pod::Coverage
@@ -131,9 +205,21 @@ sub DEMOLISH {
     }
 }
 
-=method start_server($callback)
+=method uri
 
-Internal.
+Return URI of a newly created server (with a trailing C</>).
+
+=cut
+
+sub uri {
+    my ($self) = @_;
+    return sprintf('http://%s:%d/', $self->address, $self->port);
+}
+
+=method start_server($prepare_cb)
+
+B<(internal)> Wrapper for the C<tcp_server> from L<AnyEvent::Socket>.
+C<$prepare_cb> is used to get the IP address and port of the local socket endpoint and populate respective attributes.
 
 =cut
 
@@ -192,20 +278,9 @@ sub start_server {
     );
 }
 
-=method uri()
-
-Return URI of a newly created server.
-
-=cut
-
-sub uri {
-    my ($self) = @_;
-    return sprintf('http://%s:%d/', $self->address, $self->port);
-}
-
 =func _cleanup
 
-Close descriptor and shutdown connection.
+B<(internal)> Close descriptor and shutdown connection.
 
 =cut
 
@@ -226,7 +301,7 @@ sub _cleanup {
 
 =func _reply
 
-Issue HTTP reply to HTTP request.
+B<(internal)> Issue HTTP reply.
 
 =cut
 
