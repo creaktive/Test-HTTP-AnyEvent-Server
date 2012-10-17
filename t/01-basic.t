@@ -44,11 +44,10 @@ my $stamp = time;
 http_request GET => $server->uri . q(delay/3), timeout => 5, sub {
     if ($_[0] =~ m{^issued\s+(.+)$}ix) {
         my $issued = AnyEvent::HTTP::parse_date($1);
-        ok(looks_like_number($issued), q(parsed time string));
-        ok($issued == $stamp, q(detected immediately));
-        $issued = time - $issued;
-        ok($issued >= 2, qq(delay $issued within lower range));
-        ok($issued <= 4, qq(delay $issued within upper range));
+        ok(looks_like_number($issued), qq(parsed time string "$1" as $issued));
+        ok(is_within_range($issued, $stamp, 1), qq(replied (almost) immediately (started at $stamp)));
+        my $now = time;
+        ok(is_within_range($issued + 3, $now, 1), qq(delayed until $now));
     } else {
         fail(q(invalid date response));
     }
@@ -69,4 +68,13 @@ http_request HEAD => $server->uri, sub {
 
 $cv->wait;
 
-done_testing(12);
+done_testing(11);
+
+
+sub is_within_range {
+    my ($val, $ref, $range) = @_;
+    return
+        (abs($val - $ref) <= $range)
+            ? 1
+            : 0
+}
