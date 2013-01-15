@@ -160,7 +160,7 @@ use POSIX;
 
 # VERSION
 
-our %pool;
+my %pool;
 
 =attr address
 
@@ -241,6 +241,7 @@ DEMOLISH
 sub BUILD {
     my ($self) = @_;
 
+    ## no critic (RequireLocalizedPunctuationVars)
     @ENV{qw(no_proxy http_proxy ftp_proxy all_proxy)} = (q(localhost,127.0.0.1), (q()) x 3)
         if $self->disable_proxy;
 
@@ -304,6 +305,8 @@ sub BUILD {
             }
         }
     }
+
+    return;
 }
 
 sub DEMOLISH {
@@ -315,6 +318,8 @@ sub DEMOLISH {
         AE::log info =>
             "killed $pid";
     }
+
+    return;
 }
 
 =method uri
@@ -373,17 +378,17 @@ sub start_server {
             });
 
             $h->push_read(regex => qr{(\015?\012){2}}x, sub {
-                my ($h, $data) = @_;
+                my ($_h, $data) = @_;
                 $hdr = $data;
                 AE::log debug => "got headers\n";
                 if ($hdr =~ m{\bContent-length:\s*(\d+)\b}isx) {
                     AE::log debug => "expecting content\n";
-                    $h->push_read(chunk => int($1), sub {
-                        my ($h, $data) = @_;
-                        _reply($h, $req, $hdr, $data);
+                    $_h->push_read(chunk => int($1), sub {
+                        my ($__h, $__data) = @_;
+                        _reply($__h, $req, $hdr, $__data);
                     });
                 } else {
-                    _reply($h, $req, $hdr);
+                    _reply($_h, $req, $hdr);
                 }
             });
         } => $cb
@@ -400,13 +405,18 @@ sub _cleanup {
     #my ($h, $fatal, $msg) = @_;
     my ($h) = @_;
     AE::log debug => "closing connection\n";
-    eval {
-        no warnings;    ## no critic
+    my $r = eval {
+        ## no critic (ProhibitNoWarnings)
+        no warnings;
 
         my $id = fileno($h->{fh});
         delete $pool{$id};
         shutdown $h->{fh}, 2;
+
+        return 1;
     };
+    AE::log warn => "shutdown() aborted\n"
+        if not defined $r or $@;
     $h->destroy;
     return;
 }
