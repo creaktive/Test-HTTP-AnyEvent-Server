@@ -3,56 +3,57 @@ use strict;
 use utf8;
 use warnings qw(all);
 
-BEGIN {
-    unless ($ENV{AB}) {
-        require Test::More;
-        Test::More::plan(skip_all => q(requires Apache HTTP server benchmarking tool));
-    }
-}
-
-use Test::More;
-
 use AnyEvent::Util;
 use Test::HTTP::AnyEvent::Server;
+use Test::More;
 
-$AnyEvent::Log::FILTER->level(q(fatal));
+plan skip_all => q(these tests are for automated testing)
+    unless exists $ENV{AUTOMATED_TESTING};
 
-my $server = Test::HTTP::AnyEvent::Server->new;
+SKIP: {
+    ## no critic (ProhibitBacktickOperators)
+    my $ab = qx(which ab);
+    chomp $ab;
+    skip q(requires Apache HTTP server benchmarking tool (usually /usr/bin/ab)), 4
+        unless -x $ab;
 
-my $buf;
-my $num = 1000;
+    $AnyEvent::Log::FILTER->level(q(fatal));
 
-$buf = '';
-my $cv = run_cmd
-    [qw[
-        ab
-        -c 10
-        -n], $num, qw[
-        -r
-    ], $server->uri . q(echo/head)],
-    q(<)    => q(/dev/null),
-    q(>)    => \$buf,
-    q(2>)   => q(/dev/null),
-    close_all => 1;
-$cv->recv;
-like($buf, qr{\bComplete\s+requests:\s*${num}\b}isx, q(benchmark complete));
-like($buf, qr{\bFailed\s+requests:\s*0\b}isx, q(benchmark failed));
-like($buf, qr{\bWrite\s+errors:\s*0\b}isx, q(benchmark write errrors));
+    my $server = Test::HTTP::AnyEvent::Server->new;
 
-$buf = '';
-$cv = run_cmd
-    [qw[
-        ab
-        -c 100
-        -n], $num, qw[
-        -i
-        -r
-    ], $server->uri . q(echo/head)],
-    q(<)    => q(/dev/null),
-    q(>)    => \$buf,
-    q(2>)   => q(/dev/null),
-    close_all => 1;
-$cv->recv;
-unlike($buf, qr{\bFailed\s+requests:\s*0\b}isx, q(benchmark failed));
+    my $buf;
+    my $num = 1000;
+
+    $buf = '';
+    my $cv = run_cmd
+        [$ab => qw[
+            -c 10
+            -n], $num, qw[
+            -r
+        ], $server->uri . q(echo/head)],
+        q(<)    => q(/dev/null),
+        q(>)    => \$buf,
+        q(2>)   => q(/dev/null),
+        close_all => 1;
+    $cv->recv;
+    like($buf, qr{\bComplete\s+requests:\s*${num}\b}isx, q(benchmark complete));
+    like($buf, qr{\bFailed\s+requests:\s*0\b}isx, q(benchmark failed));
+    like($buf, qr{\bWrite\s+errors:\s*0\b}isx, q(benchmark write errrors));
+
+    $buf = '';
+    $cv = run_cmd
+        [$ab => qw[
+            -c 100
+            -n], $num, qw[
+            -i
+            -r
+        ], $server->uri . q(echo/head)],
+        q(<)    => q(/dev/null),
+        q(>)    => \$buf,
+        q(2>)   => q(/dev/null),
+        close_all => 1;
+    $cv->recv;
+    unlike($buf, qr{\bFailed\s+requests:\s*0\b}isx, q(benchmark failed));
+}
 
 done_testing(4);

@@ -157,6 +157,8 @@ use Moo;
 use MooX::Types::MooseLike::Base qw(:all);
 use POSIX;
 
+no if ($] >= 5.017010), warnings => q(experimental);
+
 #$AnyEvent::Log::FILTER->level('debug');
 
 # VERSION
