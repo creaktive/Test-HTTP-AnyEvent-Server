@@ -1,6 +1,6 @@
 =pod
 
-=encoding utf8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -8,7 +8,7 @@ Test::HTTP::AnyEvent::Server - the async counterpart to Test::HTTP::Server
 
 =head1 VERSION
 
-version 0.007
+version 0.008
 
 =head1 SYNOPSIS
 
@@ -61,6 +61,12 @@ Default: 60.
 Reset the proxy-controlling environment variables (C<no_proxy>/C<http_proxy>/C<ftp_proxy>/C<all_proxy>).
 I guess you don't need a proxy to connect to yourself.
 Default: true.
+
+=head2 https
+
+Open HTTPS server instead of plain HTTP.
+This parameter follows the same rules as the C<tls_ctx> parameter to L<AnyEvent::Handle>.
+Note: HTTPS server mandatorily need both certificate and key specified!
 
 =head2 forked
 
@@ -251,3 +257,4 @@ This software is copyright (c) 2013 by Stanislaw Pusep.
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
+=cut

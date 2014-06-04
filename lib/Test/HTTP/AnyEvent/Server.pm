@@ -211,6 +211,16 @@ Default: true.
 
 has disable_proxy => (is => 'ro', isa => Bool, default => sub { 1 });
 
+=attr https
+
+Open HTTPS server instead of plain HTTP.
+This parameter follows the same rules as the C<tls_ctx> parameter to L<AnyEvent::Handle>.
+Note: HTTPS server mandatorily need both certificate and key specified!
+
+=cut
+
+has https       => (is => 'ro', isa => HashRef);
+
 =attr forked
 
 B<(experimental)> Sometimes, you just need to test some blocking code.
@@ -245,7 +255,7 @@ sub BUILD {
     my ($self) = @_;
 
     ## no critic (RequireLocalizedPunctuationVars)
-    @ENV{qw(no_proxy http_proxy ftp_proxy all_proxy)} = (q(localhost,127.0.0.1), (q()) x 3)
+    @ENV{qw(no_proxy http_proxy https_proxy ftp_proxy all_proxy)} = (q(localhost,127.0.0.1), (q()) x 4)
         if $self->disable_proxy;
 
     unless ($self->forked) {
@@ -255,7 +265,7 @@ sub BUILD {
                 $self->set_address($address);
                 $self->set_port($port);
                 AE::log info =>
-                    "bound to http://$address:$port/";
+                    'bound to ' . $self->uri;
             })
         );
     } else {
@@ -304,7 +314,7 @@ sub BUILD {
                 $self->set_port($port);
                 $self->set_forked_pid($pid);
                 AE::log info =>
-                    "forked as $pid and bound to http://$address:$port/";
+                    "forked as $pid and bound to " . $self->uri;
             }
         }
     }
@@ -333,7 +343,12 @@ Return URI of a newly created server (with a trailing C</>).
 
 sub uri {
     my ($self) = @_;
-    return sprintf('http://%s:%d/', $self->address, $self->port);
+    return sprintf(
+        '%s://%s:%d/',
+        ($self->https ? 'https' : 'http'),
+        $self->address,
+        $self->port,
+    );
 }
 
 =method start_server($prepare_cb)
@@ -365,6 +380,8 @@ sub start_server {
                 on_error    => \&_cleanup,
                 timeout     => $self->timeout,
             );
+
+            $h->starttls(accept => $self->https) if $self->https;
 
             $pool{fileno($fh)} = $h;
             AE::log debug =>
