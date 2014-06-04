@@ -213,7 +213,7 @@ has disable_proxy => (is => 'ro', isa => Bool, default => sub { 1 });
 
 =attr https
 
-Open HTTPS server instead of plain HTTP.
+B<(experimental)> Accept both HTTP and HTTPS connections on the same port.
 This parameter follows the same rules as the C<tls_ctx> parameter to L<AnyEvent::Handle>.
 Note: HTTPS server mandatorily need both certificate and key specified!
 
@@ -379,40 +379,42 @@ sub start_server {
                 on_eof      => \&_cleanup,
                 on_error    => \&_cleanup,
                 timeout     => $self->timeout,
+                ($self->https ? (tls_ctx => $self->https) : ()),
             );
 
-            $h->starttls(accept => $self->https) if $self->https;
+            $h->push_read(tls_autostart => 'accept') if $h->{tls_ctx};
 
             $pool{fileno($fh)} = $h;
             AE::log debug =>
                 sprintf "%d connection(s) in pool\n", scalar keys %pool;
 
-            my ($req, $hdr);
-
-            $h->push_read(regex => qr{\015?\012}x, sub {
-                #my ($h, $data) = @_;
-                my (undef, $data) = @_;
-                $data =~ s/\s+$//sx;
-                $req = $data;
-                AE::log debug => "request: [$req]\n";
-            });
-
-            $h->push_read(regex => qr{(\015?\012){2}}x, sub {
-                my ($_h, $data) = @_;
-                $hdr = $data;
-                AE::log debug => "got headers\n";
-                if ($hdr =~ m{\bContent-length:\s*(\d+)\b}isx) {
-                    AE::log debug => "expecting content\n";
-                    $_h->push_read(chunk => int($1), sub {
-                        my ($__h, $__data) = @_;
-                        _reply($__h, $req, $hdr, $__data);
-                    });
-                } else {
-                    _reply($_h, $req, $hdr);
-                }
-            });
+            _start($h);
         } => $cb
     );
+}
+
+=func _start
+
+B<(internal)> Start processing the request
+
+=cut
+
+sub _start {
+    return shift->push_read(regex => qr{(\015?\012){2}}x, sub {
+        my ($h, $data) = @_;
+        my ($req, $hdr) = split m{\015?\012}x, $data, 2;
+        $req =~ s/\s+$//sx;
+        AE::log debug => "request: [$req]\n";
+        if ($hdr =~ m{\bContent-length:\s*(\d+)\b}isx) {
+            AE::log debug => "expecting content\n";
+            $h->push_read(chunk => int($1), sub {
+                my ($_h, $_data) = @_;
+                _reply($_h, $req, $hdr, $_data);
+            });
+        } else {
+            _reply($h, $req, $hdr);
+        }
+    });
 }
 
 =func _cleanup
@@ -456,7 +458,7 @@ sub _reply {
         HTTP::Headers->new(
             Connection      => 'close',
             Content_Type    => 'text/plain',
-            Server          => __PACKAGE__ . "/$Test::HTTP::AnyEvent::Server::VERSION AnyEvent/$AE::VERSION Perl/$] ($^O)",
+            Server          => __PACKAGE__ . "/@{[ $Test::HTTP::AnyEvent::Server::VERSION // 0 ]} AnyEvent/$AE::VERSION Perl/$] ($^O)",
         )
     );
     $res->date(time);
@@ -465,6 +467,8 @@ sub _reply {
     if ($req =~ m{^(GET|POST)\s+(.+)\s+(HTTP/1\.[01])$}ix) {
         my ($method, $uri, $protocol) = ($1, $2, $3);
         AE::log debug => "sending response to $method ($protocol)\n";
+        AE::log debug => "simulating connection to $1\n"
+            if $uri =~ s{^(https?://[^/]+)}{}ix;
         for ($uri) {
             when (m{^/repeat/(\d+)/(.+)}x) {
                 $res->content($2 x $1);
@@ -472,7 +476,7 @@ sub _reply {
                 $res->content(
                     join(
                         "\015\012",
-                        $req,
+                        qq($method $uri $protocol),
                         $hdr,
                     )
                 );
@@ -493,6 +497,17 @@ sub _reply {
                 $res->content('Not Found');
             }
         }
+    } elsif ($req =~ m{^CONNECT\s+([\w\.\-]+):(\d+)\s+(HTTP/1\.[01])$}ix) {
+        my ($peer_host, $peer_port, $protocol) = ($1, $2, $3);
+        AE::log debug => "simulating connection to $peer_host:$peer_port ($protocol)\n";
+        $res->message('Connection established');
+        $h->push_write($res->as_string("\015\012"));
+        if ($h->{tls_ctx}) {
+            AE::log debug => 'attempting to use TLS';
+            $h->push_read(tls_autostart => 'accept');
+        }
+        _start($h);
+        return;
     } else {
         AE::log error => "bad request\n";
         $res->code(400);
