@@ -68,6 +68,25 @@ B<(experimental)> Accept both HTTP and HTTPS connections on the same port.
 This parameter follows the same rules as the C<tls_ctx> parameter to L<AnyEvent::Handle>.
 Note: HTTPS server mandatorily need both certificate and key specified!
 
+=head2 custom_handler
+
+B<(experimental)> Callback for custom request processor.
+
+    my $server = Test::HTTP::AnyEvent::Server->new(
+        custom_handler => sub {
+            # HTTP::Response instance
+            my ($response) = @_;
+            # also carries HTTP::Request!
+            if ($response->request->uri eq '/hello') {
+                $response->content('world');
+                return 1;
+            } else {
+                # 404 - Not Found
+                return 0;
+            }
+        },
+    );
+
 =head2 forked
 
 B<(experimental)> Sometimes, you just need to test some blocking code.
@@ -229,10 +248,6 @@ DEMOLISH
 =item *
 
 Implement C<cookie>/C<index> routes from L<Test::HTTP::Server>;
-
-=item *
-
-Implement custom routes;
 
 =item *
 

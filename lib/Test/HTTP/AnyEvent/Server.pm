@@ -221,6 +221,29 @@ Note: HTTPS server mandatorily need both certificate and key specified!
 
 has https       => (is => 'ro', isa => HashRef);
 
+=attr custom_handler
+
+B<(experimental)> Callback for custom request processing.
+
+    my $server = Test::HTTP::AnyEvent::Server->new(
+        custom_handler => sub {
+            # HTTP::Response instance
+            my ($response) = @_;
+            # also carries HTTP::Request!
+            if ($response->request->uri eq '/hello') {
+                $response->content('world');
+                return 1;
+            } else {
+                # 404 - Not Found
+                return 0;
+            }
+        },
+    );
+
+=cut
+
+has custom_handler => (is => 'ro', isa => CodeRef);
+
 =attr forked
 
 B<(experimental)> Sometimes, you just need to test some blocking code.
@@ -492,9 +515,32 @@ sub _reply {
                 };
                 return;
             } default {
-                $res->code(404);
-                $res->message('Not Found');
-                $res->content('Not Found');
+                my $found;
+                if ($self->custom_handler) {
+                    $res->request(HTTP::Request->new(
+                        $method,
+                        $uri,
+                        [
+                            map {
+                                m{^\s*([^:\s]+)\s*:\s*(.*)$}sx
+                            } split m{\015?\012}x, $hdr
+                        ],
+                        $content,
+                    ));
+                    $found = eval { $self->custom_handler->($res) };
+                    if ($@) {
+                        AE::log error => "custom_handler died: $@";
+                        $res->code(500);
+                        $res->message('Internal Server Error');
+                        $res->content($@);
+                        $found = 1;
+                    }
+                }
+                unless ($found) {
+                    $res->code(404);
+                    $res->message('Not Found');
+                    $res->content('Not Found');
+                }
             }
         }
     } elsif ($req =~ m{^CONNECT\s+([\w\.\-]+):(\d+)\s+(HTTP/1\.[01])$}ix) {
@@ -524,7 +570,6 @@ sub _reply {
 
 =for :list
 * Implement C<cookie>/C<index> routes from L<Test::HTTP::Server>;
-* Implement custom routes;
 * Test edge cases for L</forked>.
 
 =head1 SEE ALSO
