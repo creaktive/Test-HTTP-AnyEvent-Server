@@ -37,8 +37,8 @@ SKIP: {
         close_all => 1;
     $cv->recv;
     like($buf, qr{\bComplete\s+requests:\s*${num}\b}isx, q(benchmark complete));
-    like($buf, qr{\bFailed\s+requests:\s*0\b}isx, q(benchmark failed));
-    like($buf, qr{\bWrite\s+errors:\s*0\b}isx, q(benchmark write errrors));
+    unlike($buf, qr{\bFailed\s+requests:\s*[1-9][0-9]*\b}isx, q(benchmark failed));
+    unlike($buf, qr{\bWrite\s+errors:\s*[1-9][0-9]*\b}isx, q(benchmark write errrors));
 
     $buf = '';
     $cv = run_cmd
