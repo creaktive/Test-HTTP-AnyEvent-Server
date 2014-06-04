@@ -153,6 +153,7 @@ use AnyEvent::Util;
 use HTTP::Headers;
 use HTTP::Request;
 use HTTP::Response;
+use HTTP::Status;
 use Moo;
 use MooX::Types::MooseLike::Base qw(:all);
 use POSIX;
@@ -477,7 +478,7 @@ sub _reply {
     state $timer = {};
 
     my $res = HTTP::Response->new(
-        200 => 'OK',
+        &HTTP::Status::RC_OK ,=> undef,
         HTTP::Headers->new(
             Connection      => 'close',
             Content_Type    => 'text/plain',
@@ -530,15 +531,13 @@ sub _reply {
                     $found = eval { $self->custom_handler->($res) };
                     if ($@) {
                         AE::log error => "custom_handler died: $@";
-                        $res->code(500);
-                        $res->message('Internal Server Error');
+                        $res->code(&HTTP::Status::RC_INTERNAL_SERVER_ERROR);
                         $res->content($@);
                         $found = 1;
                     }
                 }
                 unless ($found) {
-                    $res->code(404);
-                    $res->message('Not Found');
+                    $res->code(&HTTP::Status::RC_NOT_FOUND);
                     $res->content('Not Found');
                 }
             }
@@ -556,8 +555,7 @@ sub _reply {
         return;
     } else {
         AE::log error => "bad request\n";
-        $res->code(400);
-        $res->message('Bad Request');
+        $res->code(&HTTP::Status::RC_BAD_REQUEST);
         $res->content('Bad Request');
     }
 

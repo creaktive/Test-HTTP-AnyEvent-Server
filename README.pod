@@ -70,7 +70,7 @@ Note: HTTPS server mandatorily need both certificate and key specified!
 
 =head2 custom_handler
 
-B<(experimental)> Callback for custom request processor.
+B<(experimental)> Callback for custom request processing.
 
     my $server = Test::HTTP::AnyEvent::Server->new(
         custom_handler => sub {
