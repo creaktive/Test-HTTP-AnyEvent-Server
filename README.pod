@@ -92,19 +92,19 @@ Return URI of a newly created server (with a trailing C</>).
 B<(internal)> Wrapper for the C<tcp_server> from L<AnyEvent::Socket>.
 C<$prepare_cb> is used to get the IP address and port of the local socket endpoint and populate respective attributes.
 
-=head1 FUNCTIONS
-
 =head2 _start
 
 B<(internal)> Start processing the request
 
-=head2 _cleanup
-
-B<(internal)> Close descriptor and shutdown connection.
-
 =head2 _reply
 
 B<(internal)> Issue HTTP reply.
+
+=head1 FUNCTIONS
+
+=head2 _cleanup
+
+B<(internal)> Close descriptor and shutdown connection.
 
 =head1 INTERFACE
 

@@ -382,25 +382,26 @@ sub start_server {
                 ($self->https ? (tls_ctx => $self->https) : ()),
             );
 
-            $h->push_read(tls_autostart => 'accept') if $h->{tls_ctx};
+            $h->push_read(tls_autostart => 'accept') if $self->https;
 
             $pool{fileno($fh)} = $h;
             AE::log debug =>
                 sprintf "%d connection(s) in pool\n", scalar keys %pool;
 
-            _start($h);
+            $self->_start($h);
         } => $cb
     );
 }
 
-=func _start
+=method _start
 
 B<(internal)> Start processing the request
 
 =cut
 
 sub _start {
-    return shift->push_read(regex => qr{(\015?\012){2}}x, sub {
+    my ($self, $my_handle) = @_;
+    return $my_handle->push_read(regex => qr{(\015?\012){2}}x, sub {
         my ($h, $data) = @_;
         my ($req, $hdr) = split m{\015?\012}x, $data, 2;
         $req =~ s/\s+$//sx;
@@ -409,10 +410,10 @@ sub _start {
             AE::log debug => "expecting content\n";
             $h->push_read(chunk => int($1), sub {
                 my ($_h, $_data) = @_;
-                _reply($_h, $req, $hdr, $_data);
+                $self->_reply($_h, $req, $hdr, $_data);
             });
         } else {
-            _reply($h, $req, $hdr);
+            $self->_reply($h, $req, $hdr);
         }
     });
 }
@@ -424,7 +425,6 @@ B<(internal)> Close descriptor and shutdown connection.
 =cut
 
 sub _cleanup {
-    #my ($h, $fatal, $msg) = @_;
     my ($h) = @_;
     AE::log debug => "closing connection\n";
     my $r = eval {
@@ -443,14 +443,14 @@ sub _cleanup {
     return;
 }
 
-=func _reply
+=method _reply
 
 B<(internal)> Issue HTTP reply.
 
 =cut
 
 sub _reply {
-    my ($h, $req, $hdr, $content) = @_;
+    my ($self, $h, $req, $hdr, $content) = @_;
     state $timer = {};
 
     my $res = HTTP::Response->new(
@@ -502,11 +502,11 @@ sub _reply {
         AE::log debug => "simulating connection to $peer_host:$peer_port ($protocol)\n";
         $res->message('Connection established');
         $h->push_write($res->as_string("\015\012"));
-        if ($h->{tls_ctx}) {
+        if ($self->https) {
             AE::log debug => 'attempting to use TLS';
             $h->push_read(tls_autostart => 'accept');
         }
-        _start($h);
+        $self->_start($h);
         return;
     } else {
         AE::log error => "bad request\n";
