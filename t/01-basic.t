@@ -10,6 +10,7 @@ use Scalar::Util qw(looks_like_number);
 use Test::HTTP::AnyEvent::Server;
 
 $AnyEvent::Log::FILTER->level(q(fatal));
+AnyEvent::HTTP::set_proxy(undef);
 
 my $server = Test::HTTP::AnyEvent::Server->new;
 my $cv = AE::cv;

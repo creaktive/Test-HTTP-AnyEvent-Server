@@ -9,6 +9,7 @@ use AnyEvent::HTTP;
 use Test::HTTP::AnyEvent::Server;
 
 $AnyEvent::Log::FILTER->level(q(fatal));
+AnyEvent::HTTP::set_proxy(undef);
 
 my $body = q(key1=value1&key2=value2);
 my $server = Test::HTTP::AnyEvent::Server->new(

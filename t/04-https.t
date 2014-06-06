@@ -9,6 +9,7 @@ use AnyEvent::HTTP;
 use Test::HTTP::AnyEvent::Server;
 
 $AnyEvent::Log::FILTER->level(q(fatal));
+AnyEvent::HTTP::set_proxy(undef);
 
 my $tls_ctx = { cert_file => 't/cert.pem' };
 my $server  = Test::HTTP::AnyEvent::Server->new(
