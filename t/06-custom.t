@@ -3,6 +3,7 @@ use strict;
 use utf8;
 use warnings qw(all);
 
+use Carp qw(croak);
 use Test::More;
 
 use AnyEvent::HTTP;
@@ -19,12 +20,12 @@ my $server = Test::HTTP::AnyEvent::Server->new(
             isa_ok($res, 'HTTP::Response');
             isa_ok($res->request, 'HTTP::Request');
             isa_ok($res->request->headers, 'HTTP::Headers');
-            is($res->request->content, $body);
-            is($res->request->headers->header('Content-Length'), length $body);
+            is($res->request->content, $body, 'received content is the same as the sent');
+            is($res->request->headers->header('Content-Length'), length $body, 'Content-Length is correct');
             $res->content('world');
             return 1;
         } elsif ($res->request->uri eq '/broken') {
-            die 'BROKEN';
+            croak 'BROKEN';
         } else {
             return 0;
         }
