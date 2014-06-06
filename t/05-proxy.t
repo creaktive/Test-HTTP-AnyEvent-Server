@@ -17,7 +17,16 @@ my $server  = Test::HTTP::AnyEvent::Server->new(
 );
 my $cv = AE::cv;
 
-for my $proto (qw(http https)) {
+my @proto = qw(http);
+## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
+eval q(use Net::SSLeay);
+if ($@) {
+    diag q(Not testing HTTPS functionality, Net::SSLeay required);
+} else {
+    push @proto => q(https);
+}
+
+for my $proto (@proto) {
     $cv->begin;
     http_request
         GET     => qq($proto://ohhai/echo/head),
@@ -36,4 +45,4 @@ for my $proto (qw(http https)) {
 
 $cv->wait;
 
-done_testing(8);
+done_testing(4 * scalar @proto);

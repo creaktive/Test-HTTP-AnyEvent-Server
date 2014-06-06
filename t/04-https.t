@@ -5,6 +5,10 @@ use warnings qw(all);
 
 use Test::More;
 
+## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
+eval q(use Net::SSLeay);
+plan skip_all => q(Net::SSLeay required for HTTPS functionality) if $@;
+
 use AnyEvent::HTTP;
 use Test::HTTP::AnyEvent::Server;
 

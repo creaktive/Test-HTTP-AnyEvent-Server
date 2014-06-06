@@ -214,7 +214,7 @@ has disable_proxy => (is => 'ro', isa => Bool, default => sub { 1 });
 
 =attr https
 
-B<(experimental)> Accept both HTTP and HTTPS connections on the same port.
+B<(experimental)> Accept both HTTP and HTTPS connections on the same port (depends on L<Net::SSLeay>).
 This parameter follows the same rules as the C<tls_ctx> parameter to L<AnyEvent::Handle>.
 Note: HTTPS server mandatorily need both certificate and key specified!
 
