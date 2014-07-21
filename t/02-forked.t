@@ -8,12 +8,16 @@ use Test::More;
 use HTTP::Tiny;
 use Test::HTTP::AnyEvent::Server;
 
+local $ENV{no_proxy} = '*';
+
 my $server = Test::HTTP::AnyEvent::Server->new(
     disable_proxy   => 0,
     forked          => 1,
 );
 
 my $ua = HTTP::Tiny->new(
+    http_proxy      => undef,
+    https_proxy     => undef,
     proxy           => undef,
 );
 
