@@ -42,7 +42,7 @@ http_request GET => $server->uri . q(repeat/123/qwerty), sub {
 };
 
 SKIP: {
-    skip q(MidnightBSD 0.3 fails this test)
+    skip q(MidnightBSD 0.3 fails this test), 3
         if $Config{osname} eq 'midnightbsd'
         and $Config{osvers} eq '0.3-release';
 
